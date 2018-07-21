@@ -7,7 +7,7 @@ Please note that this changes the global printer settings. If possible, it is al
 The settings are valid while the object exists and are automatically restored when destroyed.
 
 example usage:
-```
+```pascal
     PrinterScope := TPrinterSettingsScope.Create(false);
     try
       PrinterScope.Instance.Color := TPrinterColor.tpc_monochrome;
@@ -16,3 +16,7 @@ example usage:
       PrinterScope.Free;
     end;
 ```
+
+# License
+
+All code licensed free to use under the MIT License
