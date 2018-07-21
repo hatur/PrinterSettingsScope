@@ -15,9 +15,11 @@ strict private
   fSilent: Boolean;
   fIsValid: Boolean;
 
-  procedure SavePrinterState;
 public
-  constructor Create(const aSilent: Boolean);
+  /// Uses the default printer.
+  constructor Create(const aSilent: Boolean); overload;
+  /// Uses a printer with given name.
+  constructor Create(const aPrinterName: string; const aSilent: Boolean); overload;
   destructor Destroy; override;
 
   property IsValid: Boolean read fIsValid write fIsValid;
@@ -56,7 +58,6 @@ begin
       begin
         if (not aSilent) then
         begin
-          FreeAndNil(fDefaultPrinter);
           raise;
         end
         else
@@ -68,16 +69,31 @@ begin
   end;
 end;
 
+constructor TPrinterSettingsScope.Create(const aPrinterName: string; const aSilent: Boolean);
+begin
+  try
+    fDefaultPrinter := TPrinterState.Create(PChar(aPrinterName));
+  except on
+    E: EPrinterScopeException do
+    begin
+      if (not aSilent) then
+      begin
+        raise;
+      end
+      else
+      begin
+        IsValid := false;
+      end;
+    end;
+
+  end;
+end;
+
 destructor TPrinterSettingsScope.Destroy;
 begin
   fDefaultPrinter.Free;
 
   inherited;
-end;
-
-procedure TPrinterSettingsScope.SavePrinterState;
-begin
-
 end;
 
 end.
