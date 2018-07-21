@@ -11,7 +11,7 @@ type
 TPrinterSettingsScope = class
 strict private
   fHasDefaultPrinter: Boolean;
-  fDefaultPrinter: TPrinterState;
+  fPrinter: TPrinterState;
   fSilent: Boolean;
   fIsValid: Boolean;
 
@@ -23,7 +23,7 @@ public
   destructor Destroy; override;
 
   property IsValid: Boolean read fIsValid write fIsValid;
-  property Instance: TPrinterState read fDefaultPrinter;
+  property Instance: TPrinterState read fPrinter;
 end;
 
 implementation
@@ -41,17 +41,17 @@ var
 begin
   fSilent := aSilent;
 
+  IsValid := false;
   fHasDefaultPrinter := false;
   SetLastError(0);
   GetDefaultPrinter(nil, @lPrinterNameSZ);
   SetLength(lPrinterName, lPrinterNameSZ);
 
   fHasDefaultPrinter := GetDefaultPrinter(PChar(lPrinterName), @lPrinterNameSZ);
-
   if fHasDefaultPrinter then
   begin
     try
-      fDefaultPrinter := TPrinterState.Create(PChar(lPrinterName));
+      fPrinter := TPrinterState.Create(PChar(lPrinterName));
       IsValid := true;
     except on
       E: EPrinterScopeException do
@@ -59,10 +59,6 @@ begin
         if (not aSilent) then
         begin
           raise;
-        end
-        else
-        begin
-          IsValid := false;
         end;
       end;
     end;
@@ -71,8 +67,11 @@ end;
 
 constructor TPrinterSettingsScope.Create(const aPrinterName: string; const aSilent: Boolean);
 begin
+  IsValid := false;
+
   try
-    fDefaultPrinter := TPrinterState.Create(PChar(aPrinterName));
+    fPrinter := TPrinterState.Create(PChar(aPrinterName));
+    IsValid := true;
   except on
     E: EPrinterScopeException do
     begin
@@ -80,10 +79,6 @@ begin
       begin
         raise;
       end
-      else
-      begin
-        IsValid := false;
-      end;
     end;
 
   end;
@@ -91,7 +86,7 @@ end;
 
 destructor TPrinterSettingsScope.Destroy;
 begin
-  fDefaultPrinter.Free;
+  fPrinter.Free;
 
   inherited;
 end;
