@@ -51,7 +51,7 @@ begin
   if fHasDefaultPrinter then
   begin
     try
-      fPrinter := TPrinterState.Create(PChar(lPrinterName));
+      fPrinter := TPrinterState.Create(PChar(lPrinterName), aSilent);
       IsValid := true;
     except on
       E: EPrinterScopeException do
@@ -70,7 +70,7 @@ begin
   IsValid := false;
 
   try
-    fPrinter := TPrinterState.Create(PChar(aPrinterName));
+    fPrinter := TPrinterState.Create(PChar(aPrinterName), aSilent);
     IsValid := true;
   except on
     E: EPrinterScopeException do

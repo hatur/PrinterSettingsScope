@@ -17,23 +17,27 @@ TPrinterColor = (tpc_monochrome = 1, tpc_color = 2);
 TPrinterState = class
 strict private
   fPrinterName: string;
+  fSilent: Boolean;
   fDevMode: PDevMode;
   fOriginalDevModeState: DEVMODE;
   fPrinterHandle: THandle;
   fNewFields: DWORD;
   fPrinterInfo: PPrinterInfo2;
 
-  function ApplyChangesInt(const aDEVMODE: PDevMode; const aBroadcastChanges: Boolean = true): Boolean;
+  function ApplyChangesInt(const aBroadcastChanges: Boolean = true): Boolean;
   function RestoreChanges(const aBroadcastChanges: Boolean = true): Boolean;
 
 public
-  constructor Create(const aPrinterName: string);
+  constructor Create(const aPrinterName: string; const aSilent: Boolean);
   destructor Destroy; override;
 
   function ApplyChanges(const aBroadcastChanges: Boolean = true): Boolean;
 
   function GetColor: TPrinterColor;
   procedure SetColor(const aColor: TPrinterColor);
+
+  // Returns a copy of the modified devmode to use in API calls.
+  function GetDEVMODE: DEVMODE;
 
   property Color: TPrinterColor read GetColor write SetColor;
 end;
@@ -45,7 +49,7 @@ uses
 
 { TPrinterState }
 
-constructor TPrinterState.Create(const aPrinterName: string);
+constructor TPrinterState.Create(const aPrinterName: string; const aSilent: Boolean);
 var
   lPrinterDefaults: TPrinterDefaults;
   lOpenPrinterResult: Boolean;
@@ -54,6 +58,7 @@ var
   lDocPropertiesResult: LONG;
 begin
   fPrinterName := aPrinterName;
+  fSilent := aSilent;
 
   fPrinterHandle := 0;
 
@@ -150,19 +155,19 @@ end;
 function TPrinterState.ApplyChanges(const aBroadcastChanges: Boolean = true): Boolean;
 begin
   fDevMode.dmFields := fNewFields;
-  result := ApplyChangesInt(fDevMode, aBroadcastChanges);
+  result := ApplyChangesInt(aBroadcastChanges);
 end;
 
-function TPrinterState.ApplyChangesInt(const aDEVMODE: PDevMode; const aBroadcastChanges: Boolean = true): Boolean;
+function TPrinterState.ApplyChangesInt(const aBroadcastChanges: Boolean = true): Boolean;
 var
   lDocPropertiesResult: LONG;
 begin
   result := true;
 
   // Shouldn't be necessary, but just to be sure.
-  fPrinterInfo.pDevMode := aDEVMODE;
+  fPrinterInfo.pDevMode := fDEVMODE;
 
-  lDocPropertiesResult := DocumentProperties(0, fPrinterHandle, PCHAR(fPrinterName), aDEVMODE, aDEVMODE,
+  lDocPropertiesResult := DocumentProperties(0, fPrinterHandle, PCHAR(fPrinterName), fDEVMODE, fDEVMODE,
     DM_IN_BUFFER or DM_OUT_BUFFER);
   if (lDocPropertiesResult <> IDOK) then
   begin
@@ -182,12 +187,22 @@ end;
 function TPrinterState.RestoreChanges(const aBroadcastChanges: Boolean = true): Boolean;
 begin
   Move(fOriginalDevModeState, fDevMode^, sizeof(fOriginalDevModeState));
-  ApplyChangesInt(fDevMode, aBroadcastChanges);
+  ApplyChangesInt(aBroadcastChanges);
 end;
 
 function TPrinterState.GetColor: TPrinterColor;
 begin
   result := TPrinterColor(fDevMode.dmColor);
+end;
+
+function TPrinterState.GetDEVMODE: DEVMODE;
+var
+  lDEVMODECopy: DEVMODE;
+begin
+  Move(fDevMode^, lDEVMODECopy, sizeof(fDevMode^));
+  lDEVMODECopy.dmFields := fNewFields;
+
+  Result := lDEVMODECopy;
 end;
 
 procedure TPrinterState.SetColor(const aColor: TPrinterColor);
