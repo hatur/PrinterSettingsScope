@@ -1,5 +1,8 @@
 unit PrinterSettingsScope;
 
+{$HINTS ON}
+{$WARNINGS ON}
+
 interface
 
 uses
@@ -37,7 +40,6 @@ constructor TPrinterSettingsScope.Create(const aSilent: Boolean);
 var
   lPrinterName: string;
   lPrinterNameSZ: DWORD;
-  lErrorCode: Cardinal;
 begin
   fSilent := aSilent;
 
