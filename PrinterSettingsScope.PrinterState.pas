@@ -22,10 +22,11 @@ strict private
   fOriginalDevModeState: DEVMODE;
   fPrinterHandle: THandle;
   fNewFields: DWORD;
-  fPrinterInfo: PPrinterInfo2;
+  fPrinterInfo: PPrinterInfo9;
+  fStateChange: Boolean;
 
   function ApplyChangesInt(const aBroadcastChanges: Boolean = true): Boolean;
-  function RestoreChanges(const aBroadcastChanges: Boolean = true): Boolean;
+  procedure RestoreChanges(const aBroadcastChanges: Boolean = true);
 
 public
   constructor Create(const aPrinterName: string; const aSilent: Boolean);
@@ -73,7 +74,7 @@ begin
 
   SetLastError(0);
   lPrinterInfoSize := 0;
-  lOpenPrinterResult := GetPrinter(fPrinterHandle, 2, nil, 0, @lPrinterInfoSize);
+  lOpenPrinterResult := GetPrinter(fPrinterHandle, 9, nil, 0, @lPrinterInfoSize);
   if ((not lOpenPrinterResult) and (GetLastError <> ERROR_INSUFFICIENT_BUFFER)) or
     (lPrinterInfoSize = 0) then
   begin
@@ -82,9 +83,9 @@ begin
   end;
 
   // Any leak here, if the call fails?
-  fPrinterInfo := PPrinterInfo2(GlobalAlloc(GPTR, lPrinterInfoSize));
+  fPrinterInfo := PPrinterInfo9(GlobalAlloc(GPTR, lPrinterInfoSize));
 
-  lOpenPrinterResult := GetPrinter(fPrinterHandle, 2, LPBYTE(fPrinterInfo), lPrinterInfoSize, @lPrinterInfoSize);
+  lOpenPrinterResult := GetPrinter(fPrinterHandle, 9, LPBYTE(fPrinterInfo), lPrinterInfoSize, @lPrinterInfoSize);
 
   if (not lOpenPrinterResult) then
   begin
@@ -132,16 +133,14 @@ end;
 
 destructor TPrinterState.Destroy;
 begin
-  RestoreChanges;
+  if fStateChange then
+  begin
+    RestoreChanges;
+  end;
 
   if Assigned(fPrinterInfo) then
   begin
     GlobalFree(NativeUInt(fPrinterInfo));
-  end;
-
-  if Assigned(fDevMode) then
-  begin
-    GlobalFree(NativeUInt(fDevMode));
   end;
 
   if (fPrinterHandle <> 0) then
@@ -156,6 +155,7 @@ function TPrinterState.ApplyChanges(const aBroadcastChanges: Boolean = true): Bo
 begin
   fDevMode.dmFields := fNewFields;
   result := ApplyChangesInt(aBroadcastChanges);
+  fStateChange := true;
 end;
 
 function TPrinterState.ApplyChangesInt(const aBroadcastChanges: Boolean = true): Boolean;
@@ -175,7 +175,7 @@ begin
   end
   else
   begin
-    result := result and SetPrinter(fPrinterHandle, 2, LPBYTE(fPrinterInfo), 0);
+    result := result and SetPrinter(fPrinterHandle, 9, LPBYTE(fPrinterInfo), 0);
   end;
 
   if result and aBroadcastChanges then
@@ -184,7 +184,7 @@ begin
   end;
 end;
 
-function TPrinterState.RestoreChanges(const aBroadcastChanges: Boolean = true): Boolean;
+procedure TPrinterState.RestoreChanges(const aBroadcastChanges: Boolean = true);
 begin
   Move(fOriginalDevModeState, fDevMode^, sizeof(fOriginalDevModeState));
   ApplyChangesInt(aBroadcastChanges);
